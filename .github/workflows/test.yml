@@ -1,0 +1,119 @@
+name: hana-win-setup-test
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test-bat:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: 1. environment snapshot
+        shell: pwsh
+        run: |
+          "OS    : $((Get-CimInstance Win32_OperatingSystem).Caption)"
+          "PS    : $($PSVersionTable.PSVersion)"
+          $admin = (New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+          "admin : $admin"
+          foreach ($x in 'pwsh','git','rg','winget') {
+            $c = Get-Command $x -ErrorAction SilentlyContinue
+            "$x : " + $(if ($c) { $c.Source } else { '(not found)' })
+          }
+
+      - name: 2. restore script under test
+        shell: pwsh
+        env:
+          B64: |
+            QGVjaG8gb2ZmDQpzZXRsb2NhbCBlbmFibGVkZWxheWVkZXhwYW5zaW9uDQp0aXRsZSBIYW5hIGVudmlyb25tZW50IHNldHVw
+            DQoNCmlmIC9pICIlfjEiPT0iZWxldmF0ZWQiIGdvdG8gcnVuDQoNCmZsdG1jID5udWwgMj4mMQ0KaWYgIWVycm9ybGV2ZWwh
+            IG5lcSAwICgNCiAgZWNobyBSZXF1ZXN0aW5nIGFkbWluaXN0cmF0b3IgcHJpdmlsZWdlcy4uLg0KICBwb3dlcnNoZWxsIC1O
+            b1Byb2ZpbGUgLUNvbW1hbmQgIlN0YXJ0LVByb2Nlc3MgLUZpbGVQYXRoICclfmYwJyAtQXJndW1lbnRMaXN0ICdlbGV2YXRl
+            ZCcgLVZlcmIgUnVuQXMiDQogIGlmICFlcnJvcmxldmVsISBuZXEgMCAoDQogICAgZWNoby4NCiAgICBlY2hvIEVsZXZhdGlv
+            biB3YXMgY2FuY2VsbGVkLiBSaWdodC1jbGljayB0aGlzIGZpbGUgYW5kIHBpY2sgIlJ1biBhcyBhZG1pbmlzdHJhdG9yIi4N
+            CiAgICBwYXVzZQ0KICApDQogIGV4aXQgL2INCikNCg0KOnJ1bg0KZWNobyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09
+            PT09PT09PT09PT09PT09PQ0KZWNobyAgIEhhbmEgZW52aXJvbm1lbnQgc2V0dXAgZm9yIFdpbmRvd3MNCmVjaG8gPT09PT09
+            PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0NCmVjaG8uDQoNCnNldCBDSEFOR0VEPTANCnNldCBGQUlM
+            RUQ9MA0Kc2V0IFdBUk5FRD0wDQpzZXQgV0lOR0VUX01JU1NJTkc9MA0KDQp3aGVyZSB3aW5nZXQgPm51bCAyPiYxDQppZiAh
+            ZXJyb3JsZXZlbCEgbmVxIDAgKA0KICBzZXQgV0lOR0VUX01JU1NJTkc9MQ0KICBzZXQgV0FSTkVEPTENCiAgZWNobyBbV0FS
+            Tl0gd2luZ2V0IG5vdCBmb3VuZC4gSW5zdGFsbCAiQXBwIEluc3RhbGxlciIgZnJvbSBNaWNyb3NvZnQgU3RvcmUgaWYgeW91
+            IG5lZWQgYXV0by1pbnN0YWxsLg0KICBlY2hvLg0KKQ0KDQplY2hvIFsxLzNdIFBvd2VyU2hlbGwgNw0KcHdzaCAtTm9Qcm9m
+            aWxlIC1Db21tYW5kICIkUFNWZXJzaW9uVGFibGUuUFNWZXJzaW9uLlRvU3RyaW5nKCkiIDI+bnVsDQppZiAhZXJyb3JsZXZl
+            bCEgbmVxIDAgKA0KICBpZiAiIVdJTkdFVF9NSVNTSU5HISI9PSIxIiAoDQogICAgZWNobyAgICAgICBbRkFJTF0gbWlzc2lu
+            ZywgYW5kIHdpbmdldCBpcyB1bmF2YWlsYWJsZSAtIGluc3RhbGwgUG93ZXJTaGVsbCA3IG1hbnVhbGx5Lg0KICAgIHNldCBG
+            QUlMRUQ9MQ0KICApIGVsc2UgKA0KICAgIGVjaG8gICAgICAgbm90IGZvdW5kLCBpbnN0YWxsaW5nIHZpYSB3aW5nZXQgLi4u
+            DQogICAgd2luZ2V0IGluc3RhbGwgLS1pZCBNaWNyb3NvZnQuUG93ZXJTaGVsbCAtLXNvdXJjZSB3aW5nZXQgLS1hY2NlcHQt
+            cGFja2FnZS1hZ3JlZW1lbnRzIC0tYWNjZXB0LXNvdXJjZS1hZ3JlZW1lbnRzDQogICAgaWYgIWVycm9ybGV2ZWwhIG5lcSAw
+            ICgNCiAgICAgIGVjaG8gICAgICAgW0ZBSUxdIFBvd2VyU2hlbGwgNyBpbnN0YWxsIGZhaWxlZCAtIGluc3RhbGwgaXQgbWFu
+            dWFsbHkuDQogICAgICBzZXQgRkFJTEVEPTENCiAgICApIGVsc2UgKA0KICAgICAgc2V0IENIQU5HRUQ9MQ0KICAgICkNCiAg
+            KQ0KKSBlbHNlICgNCiAgZWNobyAgICAgICBhbHJlYWR5IGluc3RhbGxlZA0KKQ0KDQplY2hvLg0KZWNobyBbMi8zXSBHaXQg
+            Zm9yIFdpbmRvd3MgLSBiYXNoIHNvdXJjZQ0KZ2l0IC0tdmVyc2lvbiAyPm51bA0KaWYgIWVycm9ybGV2ZWwhIG5lcSAwICgN
+            CiAgaWYgIiFXSU5HRVRfTUlTU0lORyEiPT0iMSIgKA0KICAgIGVjaG8gICAgICAgW0ZBSUxdIG1pc3NpbmcsIGFuZCB3aW5n
+            ZXQgaXMgdW5hdmFpbGFibGUgLSBpbnN0YWxsIEdpdCBtYW51YWxseS4NCiAgICBzZXQgRkFJTEVEPTENCiAgKSBlbHNlICgN
+            CiAgICBlY2hvICAgICAgIG5vdCBmb3VuZCwgaW5zdGFsbGluZyB2aWEgd2luZ2V0IC4uLg0KICAgIHdpbmdldCBpbnN0YWxs
+            IC0taWQgR2l0LkdpdCAtLXNvdXJjZSB3aW5nZXQgLS1hY2NlcHQtcGFja2FnZS1hZ3JlZW1lbnRzIC0tYWNjZXB0LXNvdXJj
+            ZS1hZ3JlZW1lbnRzDQogICAgaWYgIWVycm9ybGV2ZWwhIG5lcSAwICgNCiAgICAgIGVjaG8gICAgICAgW0ZBSUxdIEdpdCBp
+            bnN0YWxsIGZhaWxlZCAtIGluc3RhbGwgaXQgbWFudWFsbHkuDQogICAgICBzZXQgRkFJTEVEPTENCiAgICApIGVsc2UgKA0K
+            ICAgICAgc2V0IENIQU5HRUQ9MQ0KICAgICkNCiAgKQ0KKSBlbHNlICgNCiAgZWNobyAgICAgICBhbHJlYWR5IGluc3RhbGxl
+            ZA0KKQ0KDQplY2hvLg0KZWNobyBbMy8zXSByaXBncmVwDQpyZyAtLXZlcnNpb24gMj5udWwNCmlmICFlcnJvcmxldmVsISBu
+            ZXEgMCAoDQogIGlmICIhV0lOR0VUX01JU1NJTkchIj09IjEiICgNCiAgICBlY2hvICAgICAgIFtGQUlMXSBtaXNzaW5nLCBh
+            bmQgd2luZ2V0IGlzIHVuYXZhaWxhYmxlIC0gaW5zdGFsbCByaXBncmVwIG1hbnVhbGx5Lg0KICAgIHNldCBGQUlMRUQ9MQ0K
+            ICApIGVsc2UgKA0KICAgIGVjaG8gICAgICAgbm90IGZvdW5kLCBpbnN0YWxsaW5nIHZpYSB3aW5nZXQgLi4uDQogICAgd2lu
+            Z2V0IGluc3RhbGwgLS1pZCBCdXJudFN1c2hpLnJpcGdyZXAuTVNWQyAtLXNvdXJjZSB3aW5nZXQgLS1hY2NlcHQtcGFja2Fn
+            ZS1hZ3JlZW1lbnRzIC0tYWNjZXB0LXNvdXJjZS1hZ3JlZW1lbnRzDQogICAgaWYgIWVycm9ybGV2ZWwhIG5lcSAwICgNCiAg
+            ICAgIGVjaG8gICAgICAgW0ZBSUxdIHJpcGdyZXAgaW5zdGFsbCBmYWlsZWQgLSBpbnN0YWxsIGl0IG1hbnVhbGx5Lg0KICAg
+            ICAgc2V0IEZBSUxFRD0xDQogICAgKSBlbHNlICgNCiAgICAgIHNldCBDSEFOR0VEPTENCiAgICApDQogICkNCikgZWxzZSAo
+            DQogIGVjaG8gICAgICAgYWxyZWFkeSBpbnN0YWxsZWQNCikNCg0KZWNoby4NCmVjaG8gW2NoZWNrXSBHaXQgQmFzaCBwYXRo
+            IHJlZmVyZW5jZWQgYnkgYWdlbnQgcGVyc29uYSBmaWxlcw0KaWYgZXhpc3QgIkM6XFByb2dyYW0gRmlsZXNcR2l0XGJpblxi
+            YXNoLmV4ZSIgKA0KICBlY2hvICAgICAgIE9LICBDOlxQcm9ncmFtIEZpbGVzXEdpdFxiaW5cYmFzaC5leGUNCikgZWxzZSAo
+            DQogIGVjaG8gICAgICAgW1dBUk5dIEdpdCBCYXNoIGlzIG5vdCBhdCB0aGUgZGVmYXVsdCBwYXRoLg0KICBlY2hvICAgICAg
+            ICAgICAgICBBZ2VudCBwZXJzb25hIGZpbGVzIHJlZmVyZW5jZSB0aGF0IHBhdGggLSBmaXggdGhlbSBpZiBHaXQgbGl2ZXMg
+            ZWxzZXdoZXJlLg0KICBzZXQgV0FSTkVEPTENCikNCg0KZWNoby4NCmVjaG8gW2NoZWNrXSBQeXRob24gLSBvcHRpb25hbCwg
+            dXNlZCBmb3IgdGV4dCBhbmQgSlNPTiBqb2JzDQp3aGVyZSBweXRob24gPm51bCAyPiYxDQppZiAhZXJyb3JsZXZlbCEgbmVx
+            IDAgKA0KICBzZXQgUFlESVI9DQogIGZvciAvZCAlJUQgaW4gKCIlTE9DQUxBUFBEQVRBJVxQcm9ncmFtc1xQeXRob25cUHl0
+            aG9uMyoiKSBkbyBpZiBleGlzdCAiJSV+ZkRccHl0aG9uLmV4ZSIgc2V0IFBZRElSPSUlfmZEDQogIGlmIGRlZmluZWQgUFlE
+            SVIgKA0KICAgIGVjaG8gICAgICAgW1dBUk5dIFB5dGhvbiBmb3VuZCBhdCAhUFlESVIhIGJ1dCBOT1Qgb24gUEFUSC4NCiAg
+            ICBlY2hvICAgICAgICAgICAgICBBZGQgaXQgdG8gUEFUSCBzbyBhZ2VudHMgY2FuIGNhbGwgInB5dGhvbiIgZGlyZWN0bHku
+            DQogICAgc2V0IFdBUk5FRD0xDQogICkgZWxzZSAoDQogICAgZWNobyAgICAgICBweXRob24gbm90IGZvdW5kIG9uIFBBVEgN
+            CiAgKQ0KKSBlbHNlICgNCiAgcHl0aG9uIC1WDQopDQoNCmVjaG8uDQplY2hvIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+            LS0tLS0tLS0tLS0tLS0tLS0tDQppZiAiIUZBSUxFRCEiPT0iMSIgKA0KICBlY2hvIFNvbWUgc3RlcHMgRkFJTEVELiBTZWUg
+            W0ZBSUxdIGFib3ZlIGFuZCBmaXggdGhlbS4NCikgZWxzZSBpZiAiIVdBUk5FRCEiPT0iMSIgKA0KICBlY2hvIEZpbmlzaGVk
+            LCBidXQgc29tZSBpdGVtcyBuZWVkIGF0dGVudGlvbiAtIHNlZSBbV0FSTl0gYWJvdmUuDQopIGVsc2UgaWYgIiFDSEFOR0VE
+            ISI9PSIxIiAoDQogIGVjaG8gSW5zdGFsbGVkIHNvbWV0aGluZyBuZXcuIFJlc3RhcnQgSGFuYUFnZW50IHRvIHRha2UgZWZm
+            ZWN0Lg0KKSBlbHNlICgNCiAgZWNobyBBbGwgc2V0LiBSZXN0YXJ0IEhhbmFBZ2VudCBpZiBub3QgZG9uZSBzaW5jZSBzZXR1
+            cC4NCikNCmVjaG8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0NCmVjaG8uDQpwYXVzZQ0K
+            ZW5kbG9jYWwNCg==
+        run: |
+          $bytes = [Convert]::FromBase64String(($env:B64 -replace '\s',''))
+          [IO.File]::WriteAllBytes("setup.bat", $bytes)
+          "written bytes: $($bytes.Length)"
+
+      - name: 3. structural checks (CRLF / ASCII / parens)
+        shell: pwsh
+        run: |
+          $b = [IO.File]::ReadAllBytes("setup.bat")
+          $lf = 0; $crlf = 0; $hi = 0
+          for ($i = 0; $i -lt $b.Length; $i++) {
+            if ($b[$i] -eq 10) { $lf++; if ($i -gt 0 -and $b[$i-1] -eq 13) { $crlf++ } }
+            if ($b[$i] -gt 127) { $hi++ }
+          }
+          "CRLF=$crlf  bareLF=$($lf-$crlf)  nonASCII=$hi"
+          $t = [IO.File]::ReadAllText("setup.bat")
+          "open=$(([regex]::Matches($t,'\(')).Count)  close=$(([regex]::Matches($t,'\)')).Count)"
+          if ($hi -ne 0) { throw "contains non-ASCII bytes" }
+          if ($lf -ne $crlf) { throw "contains bare LF" }
+
+      - name: 4. execute script (stdin nulled to skip pause)
+        shell: pwsh
+        run: |
+          cmd /c "setup.bat < nul"
+          "LASTEXITCODE=$LASTEXITCODE"
+
+      - name: 5. post-run verification
+        shell: pwsh
+        run: |
+          foreach ($x in 'pwsh','git','rg') {
+            $c = Get-Command $x -ErrorAction SilentlyContinue
+            "$x : " + $(if ($c) { $c.Source } else { '(not found)' })
+          }
+          "GitBash default path exists: $(Test-Path 'C:\Program Files\Git\bin\bash.exe')"
